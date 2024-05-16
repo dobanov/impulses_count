@@ -6,8 +6,6 @@
 
 так же не забыть выполнить на rapsberry pi активацию pin командами 
 
-echo 17 > /sys/class/gpio/export
-echo in > /sys/class/gpio/gpio17/direction
+echo 17 > /sys/class/gpio/export ; echo in > /sys/class/gpio/gpio17/direction
 
-echo 23 > /sys/class/gpio/export
-echo in > /sys/class/gpio/gpio23/direction
+echo 23 > /sys/class/gpio/export ; echo in > /sys/class/gpio/gpio23/direction
