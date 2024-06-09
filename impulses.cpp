@@ -3,15 +3,20 @@
 #include <fstream>
 #include <csignal>
 #include <ctime>
+#include <unistd.h> // Для использования getopt
 
 // Глобальные переменные для хранения времени последнего срабатывания
 volatile unsigned long lastDebounceTime23 = 0;
 volatile unsigned long lastDebounceTime17 = 0;
-const unsigned long debounceDelay = 200; // Дебаунс задержка в миллисекундах
+const unsigned long debounceDelay = 1000; // Дебаунс задержка в миллисекундах
 
 // Глобальные переменные для хранения состояния
 volatile bool state23 = false;
 volatile bool state17 = false;
+
+// Флаги для параметров командной строки
+bool silence = false;
+bool help = false;
 
 void updateFile(const std::string& filename) {
     std::ifstream inFile(filename);
@@ -32,7 +37,9 @@ void updateFile(const std::string& filename) {
         std::cerr << "Failed to open " << filename << " for writing." << std::endl;
     }
 
-    std::cout << "Updated " << filename << " to " << count << std::endl;
+    if (!silence) {
+        std::cout << "Updated " << filename << " to " << count << std::endl;
+    }
 }
 
 void pulseCallback23() {
@@ -69,7 +76,31 @@ void handleSignal(int signal) {
     exit(0);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    // Обработка параметров командной строки
+    int opt;
+    while ((opt = getopt(argc, argv, "sh")) != -1) {
+        switch (opt) {
+            case 's':
+                silence = true;
+                break;
+            case 'h':
+                help = true;
+                break;
+            default: /* '?' */
+                std::cerr << "Usage: " << argv[0] << " [-s] [-h]\n";
+                return 1;
+        }
+    }
+
+    if (help) {
+        std::cout << "Usage: " << argv[0] << " [-s] [-h]\n"
+                  << "Options:\n"
+                  << "  -s        Silence mode, suppresses output\n"
+                  << "  -h        Display this help message\n";
+        return 0;
+    }
+
     // Initialize WiringPi and set up GPIO
     if (wiringPiSetupGpio() == -1) {
         std::cerr << "Failed to initialize WiringPi" << std::endl;
@@ -97,7 +128,9 @@ int main() {
     // Handle termination signal to clean up
     signal(SIGINT, handleSignal);
 
-    std::cout << "Press Ctrl+C to exit" << std::endl;
+    if (!silence) {
+        std::cout << "Press Ctrl+C to exit" << std::endl;
+    }
 
     // Keep the program running to listen for interrupts
     while (true) {
@@ -115,4 +148,3 @@ int main() {
 
     return 0;
 }
-
