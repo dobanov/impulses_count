@@ -183,14 +183,19 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (help) {
-        std::cout << "Usage: " << argv[0] << " [-s] [-h] [-d]\n"
-                  << "Options:\n"
-                  << "  -s        Silence mode, suppresses output\n"
-                  << "  -h        Display this help message\n"
-                  << "  -d        Debug mode, prints additional information\n";
-        return 0;
-    }
+if (help) {
+    std::cout << "Usage: " << argv[0] << " [-s] [-h] [-d]\n"
+              << "Options:\n"
+              << "  -s        Silence mode, suppresses output\n"
+              << "  -h        Display this help message\n"
+              << "  -d        Debug mode, prints additional information\n";
+    std::cout << "\nimpulseswsend.ini file should be located at the following path:\n"
+              << std::string(getenv("HOME")) + "/.config/impulseswsend.ini" << std::endl
+              << "bot_id=YOUR_BOT_TOKEN\n"
+              << "chat_id=YOUR_CHAT_ID1,YOUR_CHAT_ID2,YOUR_CHAT_IDN\n"
+              << "debug=true/false\n";
+    return 0;
+}
 
     // Initialize WiringPi and set up GPIO
     if (wiringPiSetupGpio() == -1) {
@@ -242,7 +247,7 @@ int main(int argc, char* argv[]) {
             state17 = false;
         }
 
-        delay(100); // Sleep for 0.1 second
+        delay(3000); // Sleep for 3 seconds
     }
 
     return 0;
