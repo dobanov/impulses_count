@@ -228,7 +228,7 @@ int main(int argc, char* argv[]) {
             state17 = false;
         }
 
-        delay(100); // Sleep for 0.1 second
+        delay(3000); // Sleep for 3 second
     }
 
     return 0;
