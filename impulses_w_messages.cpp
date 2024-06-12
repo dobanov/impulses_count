@@ -6,6 +6,7 @@
 #include <unistd.h> // Для использования getopt
 #include <curl/curl.h>
 #include <vector>
+#include <sstream>
 
 // Function to read configuration from a file
 bool readConfig(const std::string& configPath, std::string& botId, std::string& chatId, bool& debug) {
@@ -60,30 +61,34 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     return size * nmemb;
 }
 
-void sendTextToTelegram(const std::string& botId, const std::string& chatId, const std::string& message, bool debugMode) {
+void sendTextToTelegram(const std::string& botId, const std::vector<std::string>& chatIds, const std::string& message, bool debugMode) {
     CURL* curl = curl_easy_init();
     if (curl) {
         std::string url = "https://api.telegram.org/bot" + botId + "/sendMessage";
-        std::string data = "chat_id=" + chatId + "&text=" + curl_easy_escape(curl, message.c_str(), 0);
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+        std::string escapedMessage = curl_easy_escape(curl, message.c_str(), 0);
 
-        std::string response_string;
-        std::string header_string;
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
-        curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_string);
+        for (const auto& chatId : chatIds) {
+            std::string data = "chat_id=" + chatId + "&text=" + escapedMessage;
+            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
 
-        CURLcode res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
-            std::cerr << "Failed to send message to Telegram: " << curl_easy_strerror(res) << std::endl;
-        }
+            std::string response_string;
+            std::string header_string;
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+            curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_string);
 
-        if (debugMode) {
-            std::cout << "Response: " << response_string << std::endl;
-            std::cout << "Headers: " << header_string << std::endl;
-            std::cout << "Text message sent successfully." << std::endl;
+            CURLcode res = curl_easy_perform(curl);
+            if (res != CURLE_OK) {
+                std::cerr << "Failed to send message to Telegram: " << curl_easy_strerror(res) << std::endl;
+            }
+
+            if (debugMode) {
+                std::cout << "Response: " << response_string << std::endl;
+                std::cout << "Headers: " << header_string << std::endl;
+                std::cout << "Text message sent successfully to chat ID: " << chatId << std::endl;
+            }
         }
 
         curl_easy_cleanup(curl);
@@ -111,7 +116,16 @@ void updateFile(const std::string& filename) {
 
     if (!silence) {
         std::string message = "Another 10 liters of " + filename + " water leaked " + std::to_string(count);
-        sendTextToTelegram(BOT_TOKEN, CHAT_ID, message, debugMode);
+
+        // Split CHAT_ID into individual chatIds
+        std::vector<std::string> chatIds;
+        std::istringstream iss(CHAT_ID);
+        std::string chatId;
+        while (std::getline(iss, chatId, ',')) {
+            chatIds.push_back(chatId);
+        }
+
+        sendTextToTelegram(BOT_TOKEN, chatIds, message, debugMode);
     }
 }
 
@@ -119,7 +133,7 @@ void pulseCallback23() {
     unsigned long currentTime = millis();
     if (currentTime - lastDebounceTime23 > debounceDelay) {
         if (!state23) {
-            updateFile("cold");
+            updateFile("cold.txt");
             state23 = true;
         }
         lastDebounceTime23 = currentTime;
@@ -130,7 +144,7 @@ void pulseCallback17() {
     unsigned long currentTime = millis();
     if (currentTime - lastDebounceTime17 > debounceDelay) {
         if (!state17) {
-            updateFile("hot");
+            updateFile("hot.txt");
             state17 = true;
         }
         lastDebounceTime17 = currentTime;
@@ -228,7 +242,7 @@ int main(int argc, char* argv[]) {
             state17 = false;
         }
 
-        delay(3000); // Sleep for 3 second
+        delay(100); // Sleep for 0.1 second
     }
 
     return 0;
