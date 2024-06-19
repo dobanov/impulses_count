@@ -133,7 +133,7 @@ void pulseCallback23() {
     unsigned long currentTime = millis();
     if (currentTime - lastDebounceTime23 > debounceDelay) {
         if (!state23) {
-            updateFile("cold.txt");
+            updateFile("cold");
             state23 = true;
         }
         lastDebounceTime23 = currentTime;
@@ -144,7 +144,7 @@ void pulseCallback17() {
     unsigned long currentTime = millis();
     if (currentTime - lastDebounceTime17 > debounceDelay) {
         if (!state17) {
-            updateFile("hot.txt");
+            updateFile("hot");
             state17 = true;
         }
         lastDebounceTime17 = currentTime;
