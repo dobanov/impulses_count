@@ -4,8 +4,8 @@ RRDTOOL=/usr/bin/rrdtool
 DATABASE=/opt/var/lib/rrd/rrdwater_new.rrd
 PERIOD=300
 
-read COLD_NOW < /opt/usr/bin/cold
-read HOT_NOW < /opt/usr/bin/hot
+read COLD_NOW < /tmp/cold
+read HOT_NOW < /tmp/hot
 
 IMAGE_PATH=/var/www/html/rrd
 
