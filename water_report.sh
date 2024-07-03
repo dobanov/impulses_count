@@ -5,28 +5,26 @@ period="$1"
 
 # Путь к файлам счетчиков
 HOT_LAST_FILE="/tmp/hot_last_$period"
-HOT_TOTAL_FILE="/tmp/hot"
 COLD_LAST_FILE="/tmp/cold_last_$period"
-COLD_TOTAL_FILE="/tmp/cold"
 
-# Создание файлов счетчиков, если они не существуют
-touch "$HOT_LAST_FILE"
-touch "$COLD_LAST_FILE"
+# Проверка существования файлов и создание их при необходимости
+if [ ! -e "$HOT_LAST_FILE" ]; then
+    touch "$HOT_LAST_FILE"
+    HOT_LAST=0
+else
+    read HOT_LAST < "$HOT_LAST_FILE"
+fi
+
+if [ ! -e "$COLD_LAST_FILE" ]; then
+    touch "$COLD_LAST_FILE"
+    COLD_LAST=0
+else
+    read COLD_LAST < "$COLD_LAST_FILE"
+fi
 
 # Чтение значений счетчиков
-read HOT_LAST < "$HOT_LAST_FILE"
-read HOT_TOTAL < "$HOT_TOTAL_FILE"
-read COLD_LAST < "$COLD_LAST_FILE"
-read COLD_TOTAL < "$COLD_TOTAL_FILE"
-
-# Если файлы не были созданы, установить значения по умолчанию в ноль
-if [ -z "$HOT_LAST" ]; then
-    HOT_LAST=0
-fi
-
-if [ -z "$COLD_LAST" ]; then
-    COLD_LAST=0
-fi
+read HOT_TOTAL < "/tmp/hot"
+read COLD_TOTAL < "/tmp/cold"
 
 # Вычисление текущего периода
 HOT_THIS_PERIOD=$((HOT_TOTAL - HOT_LAST))
