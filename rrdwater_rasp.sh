@@ -65,17 +65,13 @@ DRAW_GRAPHIC()
         -w 550 \
         -h 172 \
         DEF:hot=$DATABASE:hot:AVERAGE \
-        LINE1:hot#ff0000:"$UNDER_TEXT" \
-        GPRINT:hot:MIN:'min\: %2.0lf' \
-        GPRINT:hot:MAX:'max\: %2.0lf' \
-        GPRINT:hot:AVERAGE:'average\: %4.1lf' \
-        GPRINT:hot:LAST:'last\: %2.0lf \n' \
         DEF:cold=$DATABASE:cold:AVERAGE \
+        VDEF:hot_total=hot,TOTAL \
+        VDEF:cold_total=cold,TOTAL \
+        LINE1:hot#ff0000:"$UNDER_TEXT" \
+        GPRINT:hot_total:"total\: %4.0lf" \
         LINE1:cold#0000ff:"$UNDER_TEXT2" \
-        GPRINT:cold:MIN:'min\: %2.0lf' \
-        GPRINT:cold:MAX:'max\: %2.0lf' \
-        GPRINT:cold:AVERAGE:'average\: %4.1lf' \
-        GPRINT:cold:LAST:'last\: %2.0lf \n' \
+        GPRINT:cold_total:"total\: %4.0lf \n" \
         COMMENT:"time  \: $NOW_HOUR\:$NOW_MIN\:$NOW_SEC \n"
 }
 
