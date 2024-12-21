@@ -69,9 +69,9 @@ DRAW_GRAPHIC()
         VDEF:hot_total=hot,TOTAL \
         VDEF:cold_total=cold,TOTAL \
         LINE1:hot#ff0000:"$UNDER_TEXT" \
-        GPRINT:hot_total:"total\: %4.0lf" \
+        GPRINT:hot_total:"total\: %4.0lf0" \
         LINE1:cold#0000ff:"$UNDER_TEXT2" \
-        GPRINT:cold_total:"total\: %4.0lf \n" \
+        GPRINT:cold_total:"total\: %4.0lf0 \n" \
         COMMENT:"time  \: $NOW_HOUR\:$NOW_MIN\:$NOW_SEC \n"
 }
 
