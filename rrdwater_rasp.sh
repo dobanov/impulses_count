@@ -59,19 +59,22 @@ DRAW_GRAPHIC()
         -l $MIN \
         -r \
         -E \
-        -i \
         -R light \
-        --zoom 1.2 \
-        -w 550 \
-        -h 172 \
+        --zoom 1.5 \
+        -w 600 -h 200 \
         DEF:hot=$DATABASE:hot:AVERAGE \
         DEF:cold=$DATABASE:cold:AVERAGE \
         VDEF:hot_total=hot,TOTAL \
         VDEF:cold_total=cold,TOTAL \
-        LINE1:hot#ff0000:"$UNDER_TEXT" \
-        GPRINT:hot_total:"total\: %4.0lf0" \
-        LINE1:cold#0000ff:"$UNDER_TEXT2" \
+        CDEF:overlap=hot,cold,MIN \
+        LINE2:hot#E63946:"$UNDER_TEXT" \
+        AREA:hot#F8D5D6:"" \
+        GPRINT:hot_total:"total\: %4.0lf0 \n" \
+        LINE2:cold#457B9D:"$UNDER_TEXT2" \
+        AREA:cold#A5C9E1:"" \
         GPRINT:cold_total:"total\: %4.0lf0 \n" \
+        AREA:overlap#6A5ACD:"" \
+        COMMENT:"\n" \
         COMMENT:"time  \: $NOW_HOUR\:$NOW_MIN\:$NOW_SEC \n"
 }
 
