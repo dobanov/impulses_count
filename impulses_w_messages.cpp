@@ -9,7 +9,7 @@
 #include <sstream>
 
 // Function to read configuration from a file
-bool readConfig(const std::string& configPath, std::string& botId, std::string& chatId, bool& debug) {
+bool readConfig(const std::string& configPath, std::string& botId, std::string& chatId, bool& debug, int& pinCold, int& pinHot) {
     std::ifstream config(configPath);
     if (!config.is_open()) {
         return false;
@@ -22,6 +22,10 @@ bool readConfig(const std::string& configPath, std::string& botId, std::string& 
             chatId = line.substr(line.find("=") + 1);
         } else if (line.find("debug=") != std::string::npos) {
             debug = (line.substr(line.find("=") + 1) == "true");
+        } else if (line.find("pin_cold=") != std::string::npos) {
+            pinCold = std::stoi(line.substr(line.find("=") + 1));
+        } else if (line.find("pin_hot=") != std::string::npos) {
+            pinHot = std::stoi(line.substr(line.find("=") + 1));
         }
     }
     config.close();
@@ -34,17 +38,19 @@ void createDefaultConfig(const std::string& configPath) {
     config << "bot_id=\n";
     config << "chat_id=\n";
     config << "debug=false\n";
+    config << "pin_cold=23\n";  // Default pin for cold water
+    config << "pin_hot=17\n";   // Default pin for hot water
     config.close();
 }
 
 // Глобальные переменные для хранения времени последнего срабатывания
-volatile unsigned long lastDebounceTime23 = 0;
-volatile unsigned long lastDebounceTime17 = 0;
+volatile unsigned long lastDebounceTimeCold = 0;
+volatile unsigned long lastDebounceTimeHot = 0;
 const unsigned long debounceDelay = 1000; // Дебаунс задержка в миллисекундах
 
 // Глобальные переменные для хранения состояния
-volatile bool state23 = false;
-volatile bool state17 = false;
+volatile bool stateCold = false;
+volatile bool stateHot = false;
 
 // Флаги для параметров командной строки
 bool silence = false;
@@ -129,44 +135,45 @@ void updateFile(const std::string& filename) {
     }
 }
 
-void pulseCallback23() {
+void pulseCallbackCold() {
     unsigned long currentTime = millis();
-    if (currentTime - lastDebounceTime23 > debounceDelay) {
-        if (!state23) {
+    if (currentTime - lastDebounceTimeCold > debounceDelay) {
+        if (!stateCold) {
             updateFile("cold");
-            state23 = true;
+            stateCold = true;
         }
-        lastDebounceTime23 = currentTime;
+        lastDebounceTimeCold = currentTime;
     }
 }
 
-void pulseCallback17() {
+void pulseCallbackHot() {
     unsigned long currentTime = millis();
-    if (currentTime - lastDebounceTime17 > debounceDelay) {
-        if (!state17) {
+    if (currentTime - lastDebounceTimeHot > debounceDelay) {
+        if (!stateHot) {
             updateFile("hot");
-            state17 = true;
+            stateHot = true;
         }
-        lastDebounceTime17 = currentTime;
+        lastDebounceTimeHot = currentTime;
     }
 }
 
 void resetState() {
-    state23 = false;
-    state17 = false;
+    stateCold = false;
+    stateHot = false;
 }
 
 void handleSignal(int signal) {
     std::cout << "Exiting program..." << std::endl;
-    wiringPiISR(23, INT_EDGE_FALLING, NULL); // Remove interrupt handlers
-    wiringPiISR(17, INT_EDGE_FALLING, NULL);
     exit(0);
 }
 
 int main(int argc, char* argv[]) {
+    int pinCold = 23;  // Default pin for cold water
+    int pinHot = 17;   // Default pin for hot water
+
     // Обработка параметров командной строки
     int opt;
-    while ((opt = getopt(argc, argv, "shd")) != -1) {
+    while ((opt = getopt(argc, argv, "shd:p:c:")) != -1) {
         switch (opt) {
             case 's':
                 silence = true;
@@ -177,25 +184,28 @@ int main(int argc, char* argv[]) {
             case 'd':
                 debugMode = true;
                 break;
+            case 'p':  // Пин для холодной воды
+                pinCold = std::stoi(optarg);
+                break;
+            case 'c':  // Пин для горячей воды
+                pinHot = std::stoi(optarg);
+                break;
             default: /* '?' */
-                std::cerr << "Usage: " << argv[0] << " [-s] [-h] [-d]\n";
+                std::cerr << "Usage: " << argv[0] << " [-s] [-h] [-d] [-p pin_cold] [-c pin_hot]\n";
                 return 1;
         }
     }
 
-if (help) {
-    std::cout << "Usage: " << argv[0] << " [-s] [-h] [-d]\n"
-              << "Options:\n"
-              << "  -s        Silence mode, suppresses output\n"
-              << "  -h        Display this help message\n"
-              << "  -d        Debug mode, prints additional information\n";
-    std::cout << "\nimpulseswsend.ini file should be located at the following path:\n"
-              << std::string(getenv("HOME")) + "/.config/impulseswsend.ini" << std::endl
-              << "bot_id=YOUR_BOT_TOKEN\n"
-              << "chat_id=YOUR_CHAT_ID1,YOUR_CHAT_ID2,YOUR_CHAT_IDN\n"
-              << "debug=true/false\n";
-    return 0;
-}
+    if (help) {
+        std::cout << "Usage: " << argv[0] << " [-s] [-h] [-d] [-p pin_cold] [-c pin_hot]\n"
+                  << "Options:\n"
+                  << "  -s        Silence mode, suppresses output\n"
+                  << "  -h        Display this help message\n"
+                  << "  -d        Debug mode, prints additional information\n"
+                  << "  -p pin_cold  Set the pin number for cold water\n"
+                  << "  -c pin_hot   Set the pin number for hot water\n";
+        return 0;
+    }
 
     // Initialize WiringPi and set up GPIO
     if (wiringPiSetupGpio() == -1) {
@@ -203,48 +213,48 @@ if (help) {
         return 1;
     }
 
-    // Set up GPIO pins 23 and 17 as input
-    pinMode(23, INPUT);
-    pullUpDnControl(23, PUD_UP);
+    // Set up GPIO pins as input
+    pinMode(pinCold, INPUT);
+    pullUpDnControl(pinCold, PUD_UP);
 
-    pinMode(17, INPUT);
-    pullUpDnControl(17, PUD_UP);
+    pinMode(pinHot, INPUT);
+    pullUpDnControl(pinHot, PUD_UP);
 
     // Set up ISR for GPIO pins
-    if (wiringPiISR(23, INT_EDGE_FALLING, &pulseCallback23) < 0) {
-        std::cerr << "Failed to set up ISR for pin 23" << std::endl;
+    if (wiringPiISR(pinCold, INT_EDGE_FALLING, &pulseCallbackCold) < 0) {
+        std::cerr << "Failed to set up ISR for pin " << pinCold << std::endl;
         return 1;
     }
 
-    if (wiringPiISR(17, INT_EDGE_FALLING, &pulseCallback17) < 0) {
-        std::cerr << "Failed to set up ISR for pin 17" << std::endl;
+    if (wiringPiISR(pinHot, INT_EDGE_FALLING, &pulseCallbackHot) < 0) {
+        std::cerr << "Failed to set up ISR for pin " << pinHot << std::endl;
         return 1;
     }
 
     // Handle termination signal to clean up
     signal(SIGINT, handleSignal);
 
-    if (!silence) {
-        std::cout << "Press Ctrl+C to exit" << std::endl;
-    }
-
     // Read configuration from file
     std::string configPath = std::string(getenv("HOME")) + "/.config/impulseswsend.ini";
-    if (!readConfig(configPath, BOT_TOKEN, CHAT_ID, debug)) {
+    if (!readConfig(configPath, BOT_TOKEN, CHAT_ID, debug, pinCold, pinHot)) {
         // Create default configuration if it does not exist
         createDefaultConfig(configPath);
-        readConfig(configPath, BOT_TOKEN, CHAT_ID, debug);
+        readConfig(configPath, BOT_TOKEN, CHAT_ID, debug, pinCold, pinHot);
+    }
+
+    if (!silence) {
+        std::cout << "Press Ctrl+C to exit" << std::endl;
     }
 
     // Keep the program running to listen for interrupts
     while (true) {
         // Check if the state has returned to open
-        if (digitalRead(23) == HIGH) {
-            state23 = false;
+        if (digitalRead(pinCold) == HIGH) {
+            stateCold = false;
         }
 
-        if (digitalRead(17) == HIGH) {
-            state17 = false;
+        if (digitalRead(pinHot) == HIGH) {
+            stateHot = false;
         }
 
         delay(3000); // Sleep for 3 seconds
