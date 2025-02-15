@@ -4,7 +4,7 @@
 
 ![image](https://github.com/dobanov/impulses_count/assets/117526546/91c49a8b-3524-42a2-bee7-199e827616f9)
 
-g++ -o impulses impulses.cpp -lwiringPi -lpthread
+g++ -o impulses impulses.cpp -lwiringPi -lpthread -lcurl
 
 так же не забыть выполнить на rapsberry pi активацию pin командами 
 
